@@ -108,6 +108,11 @@ class WebhookController extends Controller
                     $subscription->stripe_status = $data['status'];
                 }
 
+                // Address...
+                if (isset($data['previous_attributes']['address'])) {
+                    $subscription->syncTaxRates();
+                }
+
                 $subscription->save();
             });
         }
@@ -197,6 +202,55 @@ class WebhookController extends Controller
         }
 
         return $this->successMethod();
+    }
+
+    /**
+     * Handle customer Tax Id created
+     *
+     * @param array $payload
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    protected function handleCustomerTaxIdCreated(array $payload)
+    {
+        $this->updateTax($payload);
+        return $this->successMethod();
+    }
+
+    /**
+     * Handle customer Tax Id updated
+     *
+     * @param array $payload
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    protected function handleCustomerTaxIdUpdated(array $payload)
+    {
+        $this->updateTax($payload);
+        return $this->successMethod();
+    }
+
+    /**
+     * Handle customer Tax Id deleted
+     *
+     * @param array $payload
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    protected function handleCustomerTaxIdDeleted(array $payload)
+    {
+        $this->updateTax($payload);
+        return $this->successMethod();
+    }
+
+    /**
+     * Sync the tax rates of user's subscriptions
+     * @param array $payload
+     */
+    private function updateTax($payload)
+    {
+        if ($user = $this->getUserByStripeId($payload['data']['object']['customer'])) {
+            $user->subscriptions->each(function (Subscription $subscription) {
+                $subscription->syncTaxRates();
+            });
+        }
     }
 
     /**
